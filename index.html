@@ -179,6 +179,7 @@ function displaySearchResults(results) {
                     };
                 })(videoId, videoTitle);
 
+
                 // Adiciona a função para criar o iframe ao clicar duas vezes
                 resultItem.ondblclick = (function(id, title) {
                     return function() {
@@ -194,6 +195,14 @@ function displaySearchResults(results) {
         }
     }
 }
+function gato(){
+                    var iframs=document.getElementById('iframeContainer');
+                    var img=document.createElement('img');
+                    img.style.marginLeft='10%'
+                    img.style="width:80px;height:95px;margin-left:-20%;"
+                    img.src='https://img1.picmix.com/output/stamp/thumb/5/7/5/3/2063575_8abc6.gif';
+                    iframs.appendChild(img)
+                  }
 
     // Função para selecionar a música a ser reproduzida
     function selectMusic(videoId, title) {
@@ -210,6 +219,7 @@ function displaySearchResults(results) {
     function createIframe(videoId, title) {
         var iframeContainer = document.getElementById('iframeContainer');
         iframeContainer.innerHTML = ''; // Limpa o conteúdo anterior
+        gato()
         var iframe = document.createElement('iframe');
         iframe.src = 'https://www.youtube.com/embed/' + videoId + '?autoplay=1';
         iframe.width = '560';
