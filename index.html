@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Radio lil peep</title>
+<style>
+    /* Estilos para melhorar a aparência */
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f5f5f5;
+        color: #333;
+    }
+    .container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+    }
+    #searchInput {
+        padding: 10px;
+        width: 300px;
+        border: none;
+        border-radius: 25px;
+        background-color: #fff;
+        color: #333;
+        font-size: 16px;
+        margin-bottom: 20px;
+    }
+    #searchInput::placeholder {
+        color: rgba(0, 0, 0, 0.7);
+    }
+    #searchButton {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 25px;
+        background-color: #1DB954;
+        color: white;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    #searchButton:hover {
+        background-color: #1ed760;
+    }
+    #searchResults {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center; /* Centraliza as opções */
+        max-width: 100%; /* Alterado para ocupar a largura total */
+        margin-bottom: 20px;
+        padding-left: 10px; /* Adiciona espaço à esquerda para compensar o alinhamento */
+    }
+    .row {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        margin-bottom: 20px;
+    }
+    .musicOption {
+        margin-right: 20px; /* Adiciona margem à direita */
+        margin-left: 10px; /* Adiciona margem à esquerda */
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: calc(16.666% - 30px); /* 16.666% de largura com margens esquerda e direita */
+    }
+    .musicOption img {
+        width: 100px;
+        height: 100px;
+        border-radius: 10px;
+        object-fit: cover;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+        transition: transform 0.2s;
+    }
+    .musicOption img:hover {
+        transform: scale(1.05);
+    }
+    .musicOption p {
+        margin-top: 5px;
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-align: center;
+    }
+    #musicControls {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    #musicControls button {
+        margin: 0 10px;
+        border: none;
+        background-color: transparent;
+        cursor: pointer;
+        transition: transform 0.2s;
+        font-size: 24px;
+    }
+    #musicControls button:hover {
+        transform: scale(1.1);
+    }
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>IQC Music</h1>
+
+    <!-- Campo de entrada para o usuário inserir o nome do vídeo do YouTube -->
+    <div style="position: relative;">
+        <input type="text" id="searchInput" placeholder="Pesquisar música">
+        <button id="searchButton" onclick="searchMusic()">Pesquisar</button>
+    </div>
+
+    <!-- Container para exibir os resultados da pesquisa -->
+    <div id="searchResults"></div>
+    <div id="iframeContainer"></div>
+</div>
+
+<script>
+document.body.style.background='#000000'
+var faviconLink = document.createElement('link');
+    faviconLink.rel = 'shortcut icon'; // Define o tipo de link como um favicon
+    faviconLink.href = 'cat.jpg'; // Insira o caminho para o seu favicon
+    
+    // Adiciona o link ao cabeçalho da página
+    document.head.appendChild(faviconLink);
+
+    var musicPlayer = new Audio();
+    var selectedMusicId;
+
+    // Função para pesquisar músicas no YouTube
+    function searchMusic() {
+        var searchQuery = document.getElementById('searchInput').value;
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', 'https://www.googleapis.com/youtube/v3/search?q=' + encodeURIComponent(searchQuery) + '&type=video&part=snippet&maxResults=12&key=AIzaSyDG4ZdBgrpJ_IsuT_655nYHNdRKzEX1h_A', true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == 4 && xhr.status == 200) {
+                var response = JSON.parse(xhr.responseText);
+                displaySearchResults(response.items);
+            }
+        };
+        xhr.send();
+    }
+
+// Função para exibir os resultados da pesquisa
+function displaySearchResults(results) {
+    var searchResultsDiv = document.getElementById('searchResults');
+    searchResultsDiv.innerHTML = ''; // Limpa os resultados anteriores
+
+    // Divide os resultados em duas linhas
+    var rowCount = Math.ceil(results.length / 6);
+    for (var i = 0; i < rowCount; i++) {
+        var rowDiv = document.createElement('div');
+        rowDiv.className = 'row';
+        searchResultsDiv.appendChild(rowDiv);
+
+        // Adiciona as opções de música à linha atual
+        for (var j = 0; j < 6; j++) {
+            var index = i * 6 + j;
+            if (index < results.length) {
+                var item = results[index];
+                var videoId = item.id.videoId;
+                var videoTitle = item.snippet.title.length > 30 ? item.snippet.title.substring(0, 30) + '...' : item.snippet.title;
+                var thumbnailUrl = item.snippet.thumbnails.default.url;
+                var resultItem = document.createElement('div');
+                resultItem.className = 'musicOption';
+                resultItem.id = videoId; // Define o ID do elemento como o videoId
+                resultItem.innerHTML = '<img src="' + thumbnailUrl + '" alt="' + videoTitle + '">' +
+                                       '<p>' + videoTitle + '</p>';
+                resultItem.onclick = (function(id, title) {
+                    return function() {
+                        selectMusic(id, title);
+                    };
+                })(videoId, videoTitle);
+
+                // Adiciona a função para criar o iframe ao clicar duas vezes
+                resultItem.ondblclick = (function(id, title) {
+                    return function() {
+                        createIframe(id, title);
+                        var iframs=document.getElementById('iframeContainer');
+                        iframs.style.marginTop='-4%';
+                        iframs.style.marginLeft='57%'
+                    };
+                })(videoId, videoTitle);
+
+                rowDiv.appendChild(resultItem);
+            }
+        }
+    }
+}
+
+    // Função para selecionar a música a ser reproduzida
+    function selectMusic(videoId, title) {
+        selectedMusicId = videoId;
+        var selectedMusicImage = document.getElementById('selectedMusicImage');
+        selectedMusicImage.src = 'https://img.youtube.com/vi/' + videoId + '/maxresdefault.jpg';
+        var selectedMusicTitle = document.getElementById('selectedMusicTitle');
+        selectedMusicTitle.textContent = title;
+        document.getElementById('selectedMusic').style.display = 'block';
+        document.getElementById('musicControls').style.display = 'block';
+    }
+
+    // Função para criar o iframe da música selecionada
+    function createIframe(videoId, title) {
+        var iframeContainer = document.getElementById('iframeContainer');
+        iframeContainer.innerHTML = ''; // Limpa o conteúdo anterior
+        var iframe = document.createElement('iframe');
+        iframe.src = 'https://www.youtube.com/embed/' + videoId + '?autoplay=1';
+        iframe.width = '560';
+        iframe.height = '250';
+        iframe.marginTop='-4%';
+        iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+        iframeContainer.appendChild(iframe);
+    }
+
+</script>
+
+
+</body>
+</html>
