@@ -1,29 +1,36 @@
-// Nome da chave no localStorage
-let chave = 'ngIdle.expiry';
+// Nome da chave original
+let chaveOriginal = 'ngIdle.expiry';
 
 // Recuperar a string JSON do localStorage
-let str = localStorage.getItem(chave);
+let str = localStorage.getItem(chaveOriginal);
 
 if (str !== null) {
-    // Copiar o valor da chave
-    let copiaStr = str;
+    // Converter a string JSON em um objeto JavaScript
+    let obj = JSON.parse(str);
 
-    // Remover a chave original do localStorage
-    localStorage.removeItem(chave);
+    // Usar uma expressão regular para substituir o valor do mês na data
+    let dataOriginal = obj.time;
+    let novaData = dataOriginal.replace(/-(\d{2})T/, (match, p1) => {
+        // Substituir o valor do mês para "04"
+        return `-04T${dataOriginal.split('T')[1]}`;
+    });
 
-    // Converter a string JSON copiada em um objeto JavaScript
-    let obj = JSON.parse(copiaStr);
-
-    // Modificar o valor "05" para "04" no campo 'time'
-    obj.time = obj.time.replace("05", "04");
+    // Atualizar o objeto com a nova data
+    obj.time = novaData;
 
     // Converter o objeto de volta para uma string JSON
     let novaStr = JSON.stringify(obj);
 
-    // Inserir a nova string JSON com o valor atualizado no localStorage
-    localStorage.setItem(chave, novaStr);
+    // Recriar a chave original com o valor atualizado
+    localStorage.setItem(chaveOriginal, novaStr);
 
-    console.log('Chave copiada, removida e recriada com sucesso');
+    console.log('Chave atualizada');
+
+    // Alterar o título após 9 segundos
+    setTimeout(() => {
+        document.title = 'TOTVS Manufatura(Limited)';
+        console.log('Título alterado para TOTVS Manufatura(Limited)');
+    }, 9000); // 9000 milissegundos = 9 segundos
 } else {
-    console.log('Chave não encontrada');
+    console.log('Chave não encontrada.');
 }
