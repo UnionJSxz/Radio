@@ -1,0 +1,143 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local rodando = false  -- Estado do botão (ligado ou desligado)
+local contador = 0
+local repeticoesExecutarOutroScript = 5
+local pausaAtiva = false
+local tempoParaPausa = 3
+local tempoDeEspera = 1  -- Reduz o tempo de espera para aumentar a velocidade das chamadas
+local intervaloVerificacoes = 10  -- Aumenta o intervalo de verificação para 10 segundos
+local X = 30000
+
+-- Funções para executar ações
+function comer()
+    player.Character.Events.Eat:FireServer()
+end
+
+function pegarBloco()
+    local args = {
+        [1] = false,
+        [2] = false
+    }
+    player.Character.Events.Grab:FireServer(unpack(args))
+end
+
+function vender()
+    player.Character.Events.Sell:FireServer()
+    pausaAtiva = true
+    wait(tempoParaPausa)
+    pausaAtiva = false
+
+    if rodando then
+        for i = 1, repeticoesExecutarOutroScript do
+            comer()
+        end
+        if contador % 10 == 0 then
+            pegarBloco()
+        end
+    end
+end
+
+-- Função para criar o botão na tela
+local function criarBotao()
+    local screenGui = player.PlayerGui:FindFirstChild("PersistenteBotaoGUI")
+    if screenGui then
+        screenGui:Destroy()
+    end
+
+    screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "PersistenteBotaoGUI"
+    screenGui.Parent = player:WaitForChild("PlayerGui")
+
+    local botao = Instance.new("TextButton")
+    botao.Size = UDim2.new(0, 40, 0, 40)
+    botao.Position = UDim2.new(0.5, -20, 0.5, -20)
+    botao.AnchorPoint = Vector2.new(0.5, 0.5)
+    botao.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    botao.Text = ""
+    botao.Parent = screenGui
+
+    local imagemFundo = Instance.new("ImageLabel")
+    imagemFundo.Size = UDim2.new(1, 0, 1, 0)
+    imagemFundo.Position = UDim2.new(0, 0, 0, 0)
+    imagemFundo.Image = "rbxassetid://84137644668149"
+    imagemFundo.BackgroundTransparency = 1
+    imagemFundo.Parent = botao
+
+    botao.MouseButton1Click:Connect(function()
+        rodando = not rodando
+        contador = 0  -- Reseta o contador ao ligar o script novamente
+
+        if rodando then
+            imagemFundo.Image = "rbxassetid://106863280743567"
+            pausaAtiva = false  -- Retira a pausa ao ligar
+        else
+            imagemFundo.Image = "rbxassetid://84137644668149"
+            pausaAtiva = true  -- Pausa quando desliga
+        end
+    end)
+
+    local dragging = false
+    local dragStart, startPos
+
+    botao.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = botao.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    botao.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.Touch then
+            local delta = input.Position - dragStart
+            botao.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+criarBotao()
+
+RunService.Heartbeat:Connect(function()
+    if not rodando or pausaAtiva then return end
+
+    local tamanhoAtual = player.leaderstats.Size.Value
+
+    if tamanhoAtual == X then
+        vender()
+    else
+        local primeiroTamanho = tamanhoAtual
+        local verificacoes = 2  -- Diminui o número de verificações
+
+        for i = 1, verificacoes do
+            wait(intervaloVerificacoes)  -- Aumenta o tempo entre verificações
+            tamanhoAtual = player.leaderstats.Size.Value
+            if tamanhoAtual ~= primeiroTamanho then
+                break
+            end
+            if i == verificacoes and tamanhoAtual == primeiroTamanho then
+                pausaAtiva = true
+                wait(tempoParaPausa)
+                pausaAtiva = false
+            end
+        end
+    end
+
+    for i = 1, repeticoesExecutarOutroScript do
+        if not pausaAtiva then
+            comer()
+        end
+    end
+
+    if contador % 10 == 0 and not pausaAtiva then
+        pegarBloco()
+    end
+
+    contador = contador + 1
+end)
