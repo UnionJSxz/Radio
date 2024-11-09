@@ -1,59 +1,177 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
-local rodando = false  -- Estado do botão (ligado ou desligado)
+local rodando = false
 local contador = 0
 local repeticoesExecutarOutroScript = 5
 local pausaAtiva = false
-local tempoParaPausa = 3
-local tempoDeEspera = 1  -- Reduz o tempo de espera para aumentar a velocidade das chamadas
-local intervaloVerificacoes = 10  -- Aumenta o intervalo de verificação para 10 segundos
-local X = 30000
+local tempoParaPausa = 0.4-- Tempo de pausa reduzido
+local intervaloVerificacoes = 10
+local X = nil  -- Variável para armazenar o valor inserido
+local ultimoTeleporte = 0  -- Variável para controlar o tempo de espera entre teletransportes
+local cooldownTeleporte = 5  -- Tempo de cooldown entre teletransportes em segundos
 
--- Funções para executar ações
+local rayDistance = 1000 -- Distância máxima do raycast para encontrar a superfície
+
+-- Limites para a geração da posição aleatória em volta do centro do mapa (0, 0, 0)
+local function generateRandomPosition()
+    local minX, maxX = -280, 280
+    local minY, maxY = 0, 0
+    local minZ, maxZ = -450, 450
+    local randomX = math.random(minX, maxX)
+    local randomY = math.random(minY, maxY)
+    local randomZ = math.random(minZ, maxZ)
+    return Vector3.new(randomX, randomY, randomZ)
+end
+
+-- Teleportar o jogador para a superfície
+local function teleportToSurface()
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        local randomPosition = generateRandomPosition()  -- Gera posição em volta do centro do mapa
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterDescendantsInstances = { player.Character }
+        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+        
+        local origin = randomPosition + Vector3.new(0, rayDistance, 0)
+        local direction = Vector3.new(0, -rayDistance * 2, 0)
+        local raycastResult = workspace:Raycast(origin, direction, raycastParams)
+        
+        local destination = raycastResult and raycastResult.Position or randomPosition  -- Se houver resultado do raycast, teletransporta para ele
+        player.Character.HumanoidRootPart.CFrame = CFrame.new(destination + Vector3.new(0, 3, 0))  -- Faz o teletransporte
+        
+        -- Faz o personagem olhar para o centro do mapa (0, 0, 0)
+        local lookAtPosition = Vector3.new(0, 0, 0)
+        local directionToLook = (lookAtPosition - player.Character.HumanoidRootPart.Position).unit
+        player.Character.HumanoidRootPart.CFrame = CFrame.new(player.Character.HumanoidRootPart.Position, player.Character.HumanoidRootPart.Position + directionToLook)
+    end
+end
+
+-- Funções de comer, pegar bloco e vender permanecem inalteradas
 function comer()
-    player.Character.Events.Eat:FireServer()
+    if player.Character and player.Character:FindFirstChild("Events") and player.Character.Events:FindFirstChild("Eat") then
+        player.Character.Events.Eat:FireServer()
+    end
 end
 
 function pegarBloco()
-    local args = {
-        [1] = false,
-        [2] = false
-    }
-    player.Character.Events.Grab:FireServer(unpack(args))
+    if player.Character and player.Character:FindFirstChild("Events") and player.Character.Events:FindFirstChild("Grab") then
+        local args = {
+            [1] = false,
+            [2] = false
+        }
+        player.Character.Events.Grab:FireServer(unpack(args))
+    end
 end
 
 function vender()
-    player.Character.Events.Sell:FireServer()
-    pausaAtiva = true
-    wait(tempoParaPausa)
-    pausaAtiva = false
+    if player.Character and player.Character:FindFirstChild("Events") and player.Character.Events:FindFirstChild("Sell") then
+        player.Character.Events.Sell:FireServer()
+        pausaAtiva = true
+        wait(tempoParaPausa)
+        pausaAtiva = false
 
-    if rodando then
-        for i = 1, repeticoesExecutarOutroScript do
-            comer()
-        end
-        if contador % 10 == 0 then
-            pegarBloco()
+        if rodando then
+            for i = 1, repeticoesExecutarOutroScript do
+                comer()
+            end
+            if contador % 10 == 0 then
+                pegarBloco()
+            end
         end
     end
 end
 
--- Função para criar o botão na tela
-local function criarBotao()
-    local screenGui = player.PlayerGui:FindFirstChild("PersistenteBotaoGUI")
+-- Função para criar a interface de entrada do valor de X com animação
+local function criarInterfaceValor()
+    local screenGui = player.PlayerGui:FindFirstChild("InterfaceValorGUI")
+    if screenGui then
+        screenGui:Destroy()  -- Remove a interface existente
+    end
+
+    screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "InterfaceValorGUI"
+    screenGui.Parent = player:WaitForChild("PlayerGui")
+
+    -- Retângulo centralizado com Input
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 0, 0, 50)  -- Começa fechado
+    frame.Position = UDim2.new(0.5, -100, 0.5, -5)
+    frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    frame.BackgroundTransparency = 0.3
+    frame.BorderSizePixel = 0
+    frame.Parent = screenGui
+
+    -- TextBox com placeholder ajustado
+    local textBox = Instance.new("TextBox")
+    textBox.Size = UDim2.new(0, 140, 0, 30)
+    textBox.Position = UDim2.new(0, 5, 0.5, -15)
+    textBox.PlaceholderText = "Insira seu tamanho máximo"
+    textBox.Text = X and tostring(X) or ""
+    textBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    textBox.BorderSizePixel = 0
+    textBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textBox.TextScaled = true
+    textBox.Parent = frame
+
+    -- Botão de confirmação
+    local confirmButton = Instance.new("TextButton")
+    confirmButton.Size = UDim2.new(0, 50, 0, 30)
+    confirmButton.Position = UDim2.new(0, 150, 0.5, -15)
+    confirmButton.Text = "✔"
+    confirmButton.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+    confirmButton.BorderSizePixel = 0
+    confirmButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    confirmButton.TextScaled = true
+    confirmButton.Parent = frame
+
+    -- Botão "X" para fechar a interface
+    local closeButton = Instance.new("TextButton")
+    closeButton.Size = UDim2.new(0, 20, 0, 20)
+    closeButton.Position = UDim2.new(0, 200, 0, -10)
+    closeButton.Text = "X"
+    closeButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeButton.BorderSizePixel = 0
+    closeButton.TextScaled = true
+    closeButton.Parent = frame
+
+    -- Animação para expandir o frame
+    local frameTween = TweenService:Create(frame, TweenInfo.new(0.5), {Size = UDim2.new(0, 220, 0, 50)})
+    frameTween:Play()
+
+    confirmButton.MouseButton1Click:Connect(function()
+        local valor = tonumber(textBox.Text)
+        if valor then
+            X = valor
+            confirmButton.Text = "✔"
+            confirmButton.TextColor3 = Color3.fromRGB(0, 255, 0)
+            confirmButton.BackgroundColor3 = Color3.fromRGB(0, 128, 0)
+            rodando = true
+        else
+            textBox.Text = "Valor inválido!"
+        end
+    end)
+
+    closeButton.MouseButton1Click:Connect(function()
+        screenGui:Destroy()
+    end)
+end
+
+-- Função para criar o botão ativador
+local function criarBotaoAtivar()
+    local screenGui = player.PlayerGui:FindFirstChild("PersistenteBotaoAtivarGUI")
     if screenGui then
         screenGui:Destroy()
     end
 
     screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "PersistenteBotaoGUI"
+    screenGui.Name = "PersistenteBotaoAtivarGUI"
     screenGui.Parent = player:WaitForChild("PlayerGui")
 
     local botao = Instance.new("TextButton")
     botao.Size = UDim2.new(0, 40, 0, 40)
-    botao.Position = UDim2.new(0.5, -20, 0.5, -20)
-    botao.AnchorPoint = Vector2.new(0.5, 0.5)
+    botao.Position = UDim2.new(1, -50, 0, 10)
     botao.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
     botao.Text = ""
     botao.Parent = screenGui
@@ -66,78 +184,66 @@ local function criarBotao()
     imagemFundo.Parent = botao
 
     botao.MouseButton1Click:Connect(function()
-        rodando = not rodando
-        contador = 0  -- Reseta o contador ao ligar o script novamente
-
         if rodando then
-            imagemFundo.Image = "rbxassetid://106863280743567"
-            pausaAtiva = false  -- Retira a pausa ao ligar
-        else
+            rodando = false
             imagemFundo.Image = "rbxassetid://84137644668149"
-            pausaAtiva = true  -- Pausa quando desliga
-        end
-    end)
-
-    local dragging = false
-    local dragStart, startPos
-
-    botao.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = botao.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-
-    botao.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.Touch then
-            local delta = input.Position - dragStart
-            botao.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        else
+            if X then
+                rodando = true
+                imagemFundo.Image = "rbxassetid://106863280743567"
+                contador = 0
+                                pausaAtiva = false
+            else
+                criarInterfaceValor()
+            end
         end
     end)
 end
 
-criarBotao()
+criarBotaoAtivar()
 
 RunService.Heartbeat:Connect(function()
-    if not rodando or pausaAtiva then return end
+    if not rodando or pausaAtiva or not X then return end
 
-    local tamanhoAtual = player.leaderstats.Size.Value
+    local tamanhoAtual = player.leaderstats and player.leaderstats:FindFirstChild("Size") and player.leaderstats.Size.Value
+    local teletransportado = false  -- Flag para garantir que o teletransporte só aconteça uma vez por verificação
 
     if tamanhoAtual == X then
         vender()
     else
         local primeiroTamanho = tamanhoAtual
-        local verificacoes = 2  -- Diminui o número de verificações
-
+        local verificacoes = 2
+        
         for i = 1, verificacoes do
-            wait(intervaloVerificacoes)  -- Aumenta o tempo entre verificações
-            tamanhoAtual = player.leaderstats.Size.Value
+            wait(intervaloVerificacoes)
+            tamanhoAtual = player.leaderstats and player.leaderstats:FindFirstChild("Size") and player.leaderstats.Size.Value
+            
             if tamanhoAtual ~= primeiroTamanho then
                 break
             end
-            if i == verificacoes and tamanhoAtual == primeiroTamanho then
+            
+            if i == verificacoes and tamanhoAtual == primeiroTamanho and tick() - ultimoTeleporte >= cooldownTeleporte then
+                -- Verifica se o tempo de cooldown já passou e faz o teletransporte
                 pausaAtiva = true
+                teleportToSurface()
+                ultimoTeleporte = tick()  -- Atualiza o tempo do último teletransporte
+                teletransportado = true  -- Marca que o teletransporte foi feito
                 wait(tempoParaPausa)
                 pausaAtiva = false
             end
         end
     end
 
+    -- Executa as funções restantes
     for i = 1, repeticoesExecutarOutroScript do
         if not pausaAtiva then
             comer()
         end
     end
-
+    
     if contador % 10 == 0 and not pausaAtiva then
         pegarBloco()
     end
-
+    
     contador = contador + 1
 end)
