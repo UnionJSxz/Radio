@@ -25,7 +25,7 @@ local function generateRandomPosition()
     return Vector3.new(randomX, randomY, randomZ)
 end
 
--- Teleportar o jogador para a superfície
+-- Teleportar o jogador pvara a superfície
 local function teleportToSurface()
     if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
         local randomPosition = generateRandomPosition()  -- Gera posição em volta do centro do mapa
@@ -160,7 +160,7 @@ local function criarInterfaceValor()
     checkUpButton.Size = UDim2.new(0, 30, 0, 30)
     checkUpButton.Position = UDim2.new(0, 150, 1, -55)  -- Abaixo do "Sistema de Verificação"
     local checkUpAtivo1 = player:GetAttribute("CheckUpAtivo1") or false
-    checkUpButton.BackgroundColor3 = checkUpAtivo1 and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(200, 200, 200)
+    checkUpButton.BackgroundColor3 = checkUpAtivo1 and Color3.fromRGB(0, 100 , 0) or Color3.fromRGB(200, 200, 200)
     checkUpButton.BorderSizePixel = 0
     checkUpButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     checkUpButton.TextScaled = true
@@ -173,7 +173,7 @@ local function criarInterfaceValor()
         player:SetAttribute("CheckUpAtivo1", checkUpAtivo1)  -- Salva o estado
         if checkUpAtivo1 then
             pausaAtiva = false
-            checkUpButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)  -- Verde quando ativado
+            checkUpButton.BackgroundColor3 = Color3.fromRGB(0, 100, 0)  -- Verde quando ativado
         else
            pausaAtiva = true
             checkUpButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200)  -- Cinza quando desativado
@@ -185,7 +185,7 @@ local function criarInterfaceValor()
     checkUpButton2.Size = UDim2.new(0, 30, 0, 30)
     checkUpButton2.Position = UDim2.new(0, 150, 0.5, -40)  -- Abaixo do "Check-Up 1"
     local checkUpAtivo2 = player:GetAttribute("CheckUpAtivo2") or false
-    checkUpButton2.BackgroundColor3 = checkUpAtivo2 and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(200, 200, 200)
+    checkUpButton2.BackgroundColor3 = checkUpAtivo2 and Color3.fromRGB(0, 100 , 0) or Color3.fromRGB(200, 200, 200)
     checkUpButton2.BorderSizePixel = 0
     checkUpButton2.TextColor3 = Color3.fromRGB(255, 255, 255)
     checkUpButton2.TextScaled = true
@@ -197,11 +197,14 @@ local function criarInterfaceValor()
         -- Verifica se o valor foi inserido corretamente antes de alterar o estado do Check-Up 2
         local valor = tonumber(textBox.Text)
         if valor then
+           
             -- Se o valor for válido, alterna o estado do check-up
             checkUpAtivo2 = not checkUpAtivo2
             player:SetAttribute("CheckUpAtivo2", checkUpAtivo2)  -- Salva o estado
             if checkUpAtivo2 then
-                checkUpButton2.BackgroundColor3 = Color3.fromRGB(0, 255, 0)  -- Verde quando ativado
+                X=valor
+                rodando=true
+                checkUpButton2.BackgroundColor3 = Color3.fromRGB(0, 100, 0)  -- Verde quando ativado
             else
                 checkUpButton2.BackgroundColor3 = Color3.fromRGB(200, 200, 200)  -- Cinza quando desativado
             end
