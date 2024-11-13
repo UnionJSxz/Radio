@@ -172,10 +172,10 @@ local function criarInterfaceValor()
         checkUpAtivo1 = not checkUpAtivo1  -- Alterna o estado
         player:SetAttribute("CheckUpAtivo1", checkUpAtivo1)  -- Salva o estado
         if checkUpAtivo1 then
-            pausaAtiva = false
+            pausaAtiva = true
             checkUpButton.BackgroundColor3 = Color3.fromRGB(0, 100, 0)  -- Verde quando ativado
         else
-           pausaAtiva = true
+           pausaAtiva = false
             checkUpButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200)  -- Cinza quando desativado
         end
     end)
@@ -206,6 +206,7 @@ local function criarInterfaceValor()
                 rodando=true
                 checkUpButton2.BackgroundColor3 = Color3.fromRGB(0, 100, 0)  -- Verde quando ativado
             else
+              rodando = false
                 checkUpButton2.BackgroundColor3 = Color3.fromRGB(200, 200, 200)  -- Cinza quando desativado
             end
         else
@@ -250,69 +251,66 @@ end
 criarBotaoAtivar()
 
 
-
 local teleportFeito = false  -- Flag para garantir que o teletransporte ocorra apenas uma vez
 
 RunService.Heartbeat:Connect(function()
-    if not rodando or pausaAtiva or not X then return end
+    -- Controle das verificações do tamanho baseado no flag pausaAtiva
+    if pausaAtiva then
+        local tamanhoAtual = player.leaderstats and player.leaderstats:FindFirstChild("Size") and player.leaderstats.Size.Value
 
-    local tamanhoAtual = player.leaderstats and player.leaderstats:FindFirstChild("Size") and player.leaderstats.Size.Value
-
-    if tamanhoAtual == X and not teleportFeito then
-        pausaAtiva = true --Ativa a pausa antes de vender
-        
-        -- Aguarda 2 segundos e realiza o teletransporte uma única vez
-        wait(4.8)
-        pausaAtiva = false
-        vender()
-        teleportToSurface()  -- Chama o teletransporte uma vez
-        teleportFeito = true  -- Marca que o teletransporte já foi feito
-        wait(1.9)
-        for i = 1, 60 do
-    comer()
-    pegarBloco()
-end
-
-    else
-        local primeiroTamanho = tamanhoAtual
-        local verificacoes = 2
-        
-        for i = 1, verificacoes do
-            wait(intervaloVerificacoes)
-            tamanhoAtual = player.leaderstats and player.leaderstats:FindFirstChild("Size") and player.leaderstats.Size.Value
+        if tamanhoAtual == X and not teleportFeito then
+            pausaAtiva = true -- Ativa a pausa antes de vender
             
-            if tamanhoAtual ~= primeiroTamanho then
-                break
-            end
+            -- Aguarda 2 segundos e realiza o teletransporte uma única vez
+            wait(4.8)
+            pausaAtiva = false
+            vender()
+            teleportToSurface()  -- Chama o teletransporte uma vez
+            teleportFeito = true  -- Marca que o teletransporte já foi feito
+            wait(1.9)
+        else
+            local primeiroTamanho = tamanhoAtual
+            local verificacoes = 2
             
-            if i == verificacoes and tamanhoAtual == primeiroTamanho and tick() - ultimoTeleporte >= cooldownTeleporte then
-                if not teleportFeito then
-                    teleportToSurface()
-                    teleportFeito = true
+            for i = 1, verificacoes do
+                wait(intervaloVerificacoes)
+                tamanhoAtual = player.leaderstats and player.leaderstats:FindFirstChild("Size") and player.leaderstats.Size.Value
+                
+                if tamanhoAtual ~= primeiroTamanho then
+                    break
                 end
-                pausaAtiva = true
-                ultimoTeleporte = tick()
-                wait(tempoParaPausa)
-                pausaAtiva = false
+                
+                if i == verificacoes and tamanhoAtual == primeiroTamanho and tick() - ultimoTeleporte >= cooldownTeleporte then
+                    if not teleportFeito then
+                        teleportToSurface()
+                        teleportFeito = true
+                    end
+                    pausaAtiva = true
+                    ultimoTeleporte = tick()
+                    wait(tempoParaPausa)
+                    pausaAtiva = false
+                end
             end
+        end
+
+        -- Reseta a flag `teleportFeito` quando a condição para teletransporte for reiniciada
+        if tamanhoAtual ~= X then
+            teleportFeito = false
         end
     end
 
-    -- Reseta a flag `teleportFeito` quando a condição para teletransporte for reiniciada
-    if tamanhoAtual ~= X then
-        teleportFeito = false
-    end
-
-    -- Executa as funções restantes
-    for i = 1, repeticoesExecutarOutroScript do
-        if not pausaAtiva then
+    -- Controle das chamadas das funções comer e pegarBloco baseado no flag rodando
+    if rodando then
+        -- Executa comer e pega bloco sem checar pausaAtiva diretamente nas funções
+        for i = 1, repeticoesExecutarOutroScript do
             comer()
         end
+        
+        if contador % 10 == 0 then
+            pegarBloco()
+        end
+        
+        contador = contador + 1
     end
-    
-    if contador % 10 == 0 and not pausaAtiva then
-        pegarBloco()
-    end
-    
-    contador = contador + 1
 end)
+
