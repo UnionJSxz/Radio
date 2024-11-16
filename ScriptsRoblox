@@ -4,12 +4,12 @@ local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 local rodando = false
 local contador = 0
-local repeticoesExecutarOutroScript = 3
+local repeticoesExecutarOutroScript = 4
 local pausaAtiva = false
-local tempoParaPausa = 0.6-- Tempo de pausa reduzido
-local intervaloVerificacoes = 6
+local tempoParaPausa = 0.4-- Tempo de pausa reduzido
+local intervaloVerificacoes = 4.5
 local X = nil  -- Variável para armazenar o valor inserido
-local ultimoTeleporte = 4  -- Variável para controlar o tempo de espera entre teletransportes
+local ultimoTeleporte = 0  -- Variável para controlar o tempo de espera entre teletransportes
 local cooldownTeleporte = 5  -- Tempo de cooldown entre teletransportes em segundos
 
 local rayDistance = 1000 -- Distância máxima do raycast para encontrar a superfície
@@ -25,7 +25,7 @@ local function generateRandomPosition()
     return Vector3.new(randomX, randomY, randomZ)
 end
 
--- Teleportar o jogador pvara a superfície
+-- Teleportar o jogador para a superfície
 local function teleportToSurface()
     if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
         local randomPosition = generateRandomPosition()  -- Gera posição em volta do centro do mapa
@@ -54,6 +54,10 @@ function comer()
     end
 end
 
+function altComer()
+game:GetService("Players").LocalPlayer.Character.Events.Eat:FireServer()
+end
+
 function pegarBloco()
     if player.Character and player.Character:FindFirstChild("Events") and player.Character.Events:FindFirstChild("Grab") then
         local args = {
@@ -68,7 +72,7 @@ function vender()
     if player.Character and player.Character:FindFirstChild("Events") and player.Character.Events:FindFirstChild("Sell") then
         player.Character.Events.Sell:FireServer()
         pausaAtiva = true
-        wait(tempoParaPausa)
+        wait(tempoParaPausa)  -- Tempo de pausa
         pausaAtiva = false
 
         if rodando then
@@ -82,34 +86,30 @@ function vender()
     end
 end
 
-local checkUpAtivo1 = false  -- Estado do check-up 1
-local checkUpAtivo2 = false  -- Estado do check-up 2
-
+-- Função para criar a interface de entrada do valor de X com animação
 local function criarInterfaceValor()
-    -- Verifica e remove a interface anterior, se existir
     local screenGui = player.PlayerGui:FindFirstChild("InterfaceValorGUI")
     if screenGui then
-        screenGui:Destroy()
+        screenGui:Destroy()  -- Remove a interface existente
     end
 
-    -- Criação da interface
     screenGui = Instance.new("ScreenGui")
     screenGui.Name = "InterfaceValorGUI"
     screenGui.Parent = player:WaitForChild("PlayerGui")
 
-    -- Frame principal da interface
+    -- Retângulo centralizado com Input
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 0, 0, 500)  -- Altura aumentada
+    frame.Size = UDim2.new(0, 0, 0, 50)  -- Começa fechado
     frame.Position = UDim2.new(0.5, -100, 0.5, -5)
     frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     frame.BackgroundTransparency = 0.3
     frame.BorderSizePixel = 0
     frame.Parent = screenGui
 
-    -- Caixa de texto para inserção do valor
+    -- TextBox com placeholder ajustado
     local textBox = Instance.new("TextBox")
     textBox.Size = UDim2.new(0, 140, 0, 30)
-    textBox.Position = UDim2.new(0, 5, 0.5, -40)
+    textBox.Position = UDim2.new(0, 5, 0.5, -15)
     textBox.PlaceholderText = "Insira seu tamanho máximo"
     textBox.Text = X and tostring(X) or ""
     textBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
@@ -118,7 +118,18 @@ local function criarInterfaceValor()
     textBox.TextScaled = true
     textBox.Parent = frame
 
-    -- Botão de fechamento
+    -- Botão de confirmação
+    local confirmButton = Instance.new("TextButton")
+    confirmButton.Size = UDim2.new(0, 50, 0, 30)
+    confirmButton.Position = UDim2.new(0, 150, 0.5, -15)
+    confirmButton.Text = "✔"
+    confirmButton.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+    confirmButton.BorderSizePixel = 0
+    confirmButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    confirmButton.TextScaled = true
+    confirmButton.Parent = frame
+
+    -- Botão "X" para fechar a interface
     local closeButton = Instance.new("TextButton")
     closeButton.Size = UDim2.new(0, 20, 0, 20)
     closeButton.Position = UDim2.new(0, 200, 0, -10)
@@ -130,93 +141,26 @@ local function criarInterfaceValor()
     closeButton.Parent = frame
 
     -- Animação para expandir o frame
-    local frameTween = TweenService:Create(frame, TweenInfo.new(0.5), {Size = UDim2.new(0, 220, 0, 100)})
+    local frameTween = TweenService:Create(frame, TweenInfo.new(0.5), {Size = UDim2.new(0, 220, 0, 50)})
     frameTween:Play()
 
-    -- Ação do botão de confirmação
-    closeButton.MouseButton1Click:Connect(function()
-        screenGui:Destroy()
-    end)
-
-    -- Criando o botão para o "Sistema de Verificação"
-    local verificacaoButton = Instance.new("TextButton")
-    verificacaoButton.Size = UDim2.new(0, 140, 0, 30)
-    verificacaoButton.Position = UDim2.new(0, 5, 1, -55)  -- Abaixo do botão de confirmação
-    verificacaoButton.Text = "Sistema de Verificação"
-    verificacaoButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    verificacaoButton.BorderSizePixel = 0
-    verificacaoButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    verificacaoButton.TextScaled = true
-    verificacaoButton.Parent = frame
-
-    -- Lógica do "Sistema de Verificação"
-    verificacaoButton.MouseButton1Click:Connect(function()
-        print("Sistema de Verificação acionado!")
-        -- Adicionar lógica de verificação personalizada aqui
-    end)
-
-    -- Criando o botão para o "Check-Up 1"
-    local checkUpButton = Instance.new("TextButton")
-    checkUpButton.Size = UDim2.new(0, 30, 0, 30)
-    checkUpButton.Position = UDim2.new(0, 150, 1, -55)  -- Abaixo do "Sistema de Verificação"
-    local checkUpAtivo1 = player:GetAttribute("CheckUpAtivo1") or false
-    checkUpButton.BackgroundColor3 = checkUpAtivo1 and Color3.fromRGB(0, 100 , 0) or Color3.fromRGB(200, 200, 200)
-    checkUpButton.BorderSizePixel = 0
-    checkUpButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    checkUpButton.TextScaled = true
-    checkUpButton.Text = "✔"  -- O texto permanece o mesmo
-    checkUpButton.Parent = frame
-
-    -- Ação do botão de Check-Up 1
-    checkUpButton.MouseButton1Click:Connect(function()
-        checkUpAtivo1 = not checkUpAtivo1  -- Alterna o estado
-        player:SetAttribute("CheckUpAtivo1", checkUpAtivo1)  -- Salva o estado
-        if checkUpAtivo1 then
-            pausaAtiva = true
-            checkUpButton.BackgroundColor3 = Color3.fromRGB(0, 100, 0)  -- Verde quando ativado
-        else
-           pausaAtiva = false
-            checkUpButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200)  -- Cinza quando desativado
-        end
-    end)
-
-    -- Criando o botão para o "Check-Up 2"
-    local checkUpButton2 = Instance.new("TextButton")
-    checkUpButton2.Size = UDim2.new(0, 30, 0, 30)
-    checkUpButton2.Position = UDim2.new(0, 150, 0.5, -40)  -- Abaixo do "Check-Up 1"
-    local checkUpAtivo2 = player:GetAttribute("CheckUpAtivo2") or false
-    checkUpButton2.BackgroundColor3 = checkUpAtivo2 and Color3.fromRGB(0, 100 , 0) or Color3.fromRGB(200, 200, 200)
-    checkUpButton2.BorderSizePixel = 0
-    checkUpButton2.TextColor3 = Color3.fromRGB(255, 255, 255)
-    checkUpButton2.TextScaled = true
-    checkUpButton2.Text = "✔"  -- O texto permanece o mesmo
-    checkUpButton2.Parent = frame
-
-    -- Ação do botão de Check-Up 2
-    checkUpButton2.MouseButton1Click:Connect(function()
-        -- Verifica se o valor foi inserido corretamente antes de alterar o estado do Check-Up 2
+    confirmButton.MouseButton1Click:Connect(function()
         local valor = tonumber(textBox.Text)
         if valor then
-           
-            -- Se o valor for válido, alterna o estado do check-up
-            checkUpAtivo2 = not checkUpAtivo2
-            player:SetAttribute("CheckUpAtivo2", checkUpAtivo2)  -- Salva o estado
-            if checkUpAtivo2 then
-                X=valor
-                rodando=true
-                checkUpButton2.BackgroundColor3 = Color3.fromRGB(0, 100, 0)  -- Verde quando ativado
-            else
-              rodando = false
-                checkUpButton2.BackgroundColor3 = Color3.fromRGB(200, 200, 200)  -- Cinza quando desativado
-            end
+            X = valor
+            confirmButton.Text = "✔"
+            confirmButton.TextColor3 = Color3.fromRGB(0, 255, 0)
+            confirmButton.BackgroundColor3 = Color3.fromRGB(0, 128, 0)
+            rodando = true
         else
-            -- Se o valor não for válido, exibe uma mensagem de erro
             textBox.Text = "Valor inválido!"
         end
     end)
+
+    closeButton.MouseButton1Click:Connect(function()
+        screenGui:Destroy()
+    end)
 end
-
-
 
 -- Função para criar o botão ativador
 local function criarBotaoAtivar()
@@ -239,77 +183,92 @@ local function criarBotaoAtivar()
     local imagemFundo = Instance.new("ImageLabel")
     imagemFundo.Size = UDim2.new(1, 0, 1, 0)
     imagemFundo.Position = UDim2.new(0, 0, 0, 0)
-    imagemFundo.Image = "rbxassetid://84137644668149"  -- Imagem de fundo fixa
+    imagemFundo.Image = "rbxassetid://84137644668149"
     imagemFundo.BackgroundTransparency = 1
     imagemFundo.Parent = botao
 
     botao.MouseButton1Click:Connect(function()
-        criarInterfaceValor()  -- Chamando apenas a criação da interface
+        if rodando then
+            rodando = false
+            imagemFundo.Image = "rbxassetid://84137644668149"
+        else
+            if X then
+                rodando = true
+                imagemFundo.Image = "rbxassetid://106863280743567"
+                contador = 0
+                                pausaAtiva = false
+            else
+                criarInterfaceValor()
+            end
+        end
     end)
 end
 
 criarBotaoAtivar()
 
-
-local teleportFeito = false  -- Flag para garantir que o teletransporte ocorra apenas uma vez
+local teleportando = false  -- Nova variável para controlar o estado de teleporte
 
 RunService.Heartbeat:Connect(function()
-    -- Controle das verificações do tamanho baseado no flag pausaAtiva
-    if pausaAtiva then
-        local tamanhoAtual = player.leaderstats and player.leaderstats:FindFirstChild("Size") and player.leaderstats.Size.Value
+    if not rodando or not X then return end  -- Removendo pausaAtiva dessa condição principal
 
-        if tamanhoAtual == X and not teleportFeito then
-            pausaAtiva = true -- Ativa a pausa antes de vender
-            
-            -- Aguarda 2 segundos e realiza o teletransporte uma única vez
-            wait(4.8)
-            pausaAtiva = false
-            vender()
-            teleportToSurface()  -- Chama o teletransporte uma vez
-            teleportFeito = true  -- Marca que o teletransporte já foi feito
-            wait(1.9)
-        else
-            local primeiroTamanho = tamanhoAtual
-            local verificacoes = 2
-            
-            for i = 1, verificacoes do
-                wait(intervaloVerificacoes)
-                tamanhoAtual = player.leaderstats and player.leaderstats:FindFirstChild("Size") and player.leaderstats.Size.Value
-                
-                if tamanhoAtual ~= primeiroTamanho then
-                    break
-                end
-                
-                if i == verificacoes and tamanhoAtual == primeiroTamanho and tick() - ultimoTeleporte >= cooldownTeleporte then
-                    if not teleportFeito then
-                        teleportToSurface()
-                        teleportFeito = true
-                    end
-                    pausaAtiva = true
-                    ultimoTeleporte = tick()
-                    wait(tempoParaPausa)
-                    pausaAtiva = false
-                end
-            end
+    local tamanhoAtual = player.leaderstats and player.leaderstats:FindFirstChild("Size") and player.leaderstats.Size.Value
+
+    if tamanhoAtual == X then
+        -- Teletransporte e reinício
+        pausaAtiva = true
+        rodando = false  -- Impede chamadas subsequentes durante o teleporte
+
+        wait(4.7)  -- Aguarda após a venda
+        vender()  -- Chama vender
+
+        -- Teletransporte
+        teleportToSurface()
+
+        -- Aguarda 1 segundo antes de retomar o loop e as funções
+        wait(1)
+
+        -- Redefine `pausaAtiva` e reativa `rodando` para retomar o loop principal
+        pausaAtiva = false
+        rodando = true  -- Garante que o loop continue
+
+        -- Chama `comer` e `pegarBloco` imediatamente após o teleporte
+        for i = 1, 20 do
+            pegarBloco()
+            altComer()
         end
-
-        -- Reseta a flag `teleportFeito` quando a condição para teletransporte for reiniciada
-        if tamanhoAtual ~= X then
-            teleportFeito = false
+    else
+        -- Verificação do tamanho e teleporte adicional caso necessário
+        local primeiroTamanho = tamanhoAtual
+        local verificacoes = 2
+        
+        for i = 1, verificacoes do
+            wait(intervaloVerificacoes)
+            tamanhoAtual = player.leaderstats and player.leaderstats:FindFirstChild("Size") and player.leaderstats.Size.Value
+            
+            if tamanhoAtual ~= primeiroTamanho then
+                break
+            end
+            
+            if i == verificacoes and tamanhoAtual == primeiroTamanho and tick() - ultimoTeleporte >= cooldownTeleporte then
+                pausaAtiva = true
+                teleportToSurface()
+                ultimoTeleporte = tick()
+                wait(tempoParaPausa)
+                pausaAtiva = false
+            end
         end
     end
 
-    -- Controle das chamadas das funções comer e pegarBloco baseado no flag rodando
-    if rodando then
-        -- Executa comer e pega bloco sem checar pausaAtiva diretamente nas funções
+    -- Loop principal para chamadas regulares das funções, quando rodando e não está em pausa
+    if rodando and not pausaAtiva then
         for i = 1, repeticoesExecutarOutroScript do
             comer()
         end
-        
+
         if contador % 10 == 0 then
             pegarBloco()
         end
-        
+
         contador = contador + 1
     end
 end)
