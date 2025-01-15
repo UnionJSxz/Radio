@@ -1,0 +1,33 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- Função para criar um Highlight em torno de um jogador
+local function createHighlight(player)
+    if player == LocalPlayer then return end -- Ignora o jogador local
+
+    local character = player.Character or player.CharacterAdded:Wait()
+    if not character:FindFirstChild("HumanoidRootPart") then return end
+
+    -- Verifica se o Highlight já foi criado
+    if character:FindFirstChild("PlayerHighlight") then return end
+
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "PlayerHighlight"
+    highlight.Adornee = character
+    highlight.FillColor = Color3.new(1, 0, 1) -- Cor chamativa (magenta)
+    highlight.OutlineColor = Color3.new(1, 1, 0) -- Cor do contorno (amarelo)
+    highlight.FillTransparency = 0.2 -- Transparência do preenchimento
+    highlight.OutlineTransparency = 0 -- Contorno totalmente visível
+    highlight.Parent = character
+end
+
+-- Atualizar Highlights continuamente
+RunService.RenderStepped:Connect(function()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            -- Adiciona um Highlight ao redor dos jogadores
+            createHighlight(player)
+        end
+    end
+end)
