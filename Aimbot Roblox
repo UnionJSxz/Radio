@@ -1,5 +1,5 @@
 --[[
-    AVISO: ajudtado por Ryoxxsz
+    AVISO: Atenção! Este script não foi verificado pelo ScriptBlox. Use por sua conta e risco!
 ]]
 local fov = 100
 local RunService = game:GetService("RunService")
