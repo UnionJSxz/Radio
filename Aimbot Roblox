@@ -1,0 +1,110 @@
+--[[
+    AVISO: ajudtado por Ryoxxsz
+]]
+local fov = 100
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local Cam = workspace.CurrentCamera
+
+-- Desenho do círculo de FOV
+local FOVring = Drawing.new("Circle")
+FOVring.Visible = true
+FOVring.Thickness = 2
+FOVring.Color = Color3.fromRGB(128, 0, 128) -- Cor roxa
+FOVring.Filled = false
+FOVring.Radius = fov
+FOVring.Position = Cam.ViewportSize / 2
+
+-- Texto para exibir o nome do jogador
+local playerNameText = Drawing.new("Text")
+playerNameText.Visible = false
+playerNameText.Center = true
+playerNameText.Outline = true
+playerNameText.Color = Color3.fromRGB(255, 255, 255) -- Cor branca
+playerNameText.Size = 18
+
+local function updateDrawings()
+    FOVring.Position = Cam.ViewportSize / 2
+    playerNameText.Position = Vector2.new(FOVring.Position.X, FOVring.Position.Y - FOVring.Radius - 20)
+end
+
+-- Criando o ScreenGui e o botão Toggle
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AimbotGui"
+screenGui.ResetOnSpawn = false -- Garante que o ScreenGui não seja removido ao morrer
+screenGui.Parent = playerGui
+
+local toggleButton = Instance.new("TextButton")
+toggleButton.Name = "ToggleButton"
+toggleButton.Size = UDim2.new(0, 150, 0, 50) -- Tamanho do botão
+toggleButton.Position = UDim2.new(0.1, 0, 0.1, 0) -- Posição inicial na tela
+toggleButton.Text = "Ativar Aimbot" -- Texto inicial do botão
+toggleButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Cor inicial (vermelha)
+toggleButton.Parent = screenGui
+
+local isAimbotActive = false
+
+-- Função para ativar ou desativar o Aimbot
+local function toggleAimbot()
+    isAimbotActive = not isAimbotActive
+    if isAimbotActive then
+        toggleButton.Text = "Desativar Aimbot"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0) -- Verde quando ativado
+        FOVring.Visible = true
+        playerNameText.Visible = true
+    else
+        toggleButton.Text = "Ativar Aimbot"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Vermelho quando desativado
+        FOVring.Visible = false
+        playerNameText.Visible = false
+    end
+end
+
+toggleButton.MouseButton1Click:Connect(toggleAimbot)
+
+-- Garantir que a interface permaneça ao morrer
+player.CharacterAdded:Connect(function()
+    -- Reparenta o ScreenGui para o PlayerGui após o reaparecimento
+    if screenGui.Parent ~= player:WaitForChild("PlayerGui") then
+        screenGui.Parent = player.PlayerGui
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if isAimbotActive then
+        updateDrawings()
+        local closest = nil
+        local lastDistance = math.huge
+        local playerMousePos = Cam.ViewportSize / 2
+        local localPlayerTeam = player.Team
+
+        for _, otherPlayer in ipairs(Players:GetPlayers()) do
+            if otherPlayer ~= player and otherPlayer.Team ~= localPlayerTeam then
+                local part = otherPlayer.Character and otherPlayer.Character:FindFirstChild("Head")
+                if part then
+                    local ePos, isVisible = Cam:WorldToViewportPoint(part.Position)
+                    local distance = (Vector2.new(ePos.X, ePos.Y) - playerMousePos).Magnitude
+
+                    if distance < lastDistance and isVisible and distance < fov then
+                        lastDistance = distance
+                        closest = otherPlayer
+                    end
+                end
+            end
+        end
+
+        if closest and closest.Character and closest.Character:FindFirstChild("Head") then
+            local target = closest.Character.Head.Position
+            local lookVector = (target - Cam.CFrame.Position).unit
+            Cam.CFrame = CFrame.new(Cam.CFrame.Position, Cam.CFrame.Position + lookVector)
+            playerNameText.Text = closest.Name
+            playerNameText.Visible = true
+        else
+            playerNameText.Visible = false
+        end
+    end
+end)
